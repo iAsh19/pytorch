@@ -4,7 +4,6 @@
 #include <ostream>
 #include <vector>
 
-#include "lazy_tensor_core/csrc/device.h"
 #include "lazy_tensors/computation_client/client_data.h"
 #include "lazy_tensors/computation_client/debug_macros.h"
 #include "lazy_tensors/layout.h"

@@ -157,7 +157,7 @@ OpByOpExecutor::BuildOps(c10::ArrayRef<torch::lazy::Value> roots,
           lazy_tensors::ProgramShape program_shape =
               ConsumeValue(computation->GetProgramShape());
           compile_shapes.push_back(MakeShapeWithDeviceLayout(
-              program_shape.result(), exec_device.hw_type));
+              program_shape.result()));
           compile_instances.push_back({std::move(computation), device,
                                        compilation_devices,
                                        &compile_shapes.back()});

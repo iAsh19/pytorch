@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "lazy_tensor_core/csrc/device.h"
 #include "lazy_tensors/computation_client/computation_client.h"
 #include "lazy_tensors/literal.h"
 #include "lazy_tensors/shape.h"
@@ -11,6 +10,8 @@
 #include "torch/csrc/autograd/variable.h"
 
 namespace torch_lazy_tensors {
+
+struct Device;
 
 std::vector<int64_t> ComputeShapeStrides(
     const lazy_tensors::Shape& shape);
@@ -60,13 +61,11 @@ std::vector<lazy_tensors::Shape> GetComponentShapes(
     const lazy_tensors::Shape& shape);
 
 // Create a shape with "device_type" compatible layout from the given "shape".
-lazy_tensors::Shape MakeShapeWithDeviceLayout(const lazy_tensors::Shape& shape,
-                                              DeviceType device_type);
+lazy_tensors::Shape MakeShapeWithDeviceLayout(const lazy_tensors::Shape& shape);
 
 // Create the shape to be used within a lowered computation, to represent a
 // given tensor data.
-lazy_tensors::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
-                                                     const Device* device);
+lazy_tensors::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor);
 
 at::ScalarType TensorTypeFromLtcType(lazy_tensors::PrimitiveType ltc_type);
 
@@ -82,8 +81,6 @@ lazy_tensors::PrimitiveType MakeLtcPrimitiveType(at::ScalarType scalar_type,
                                                  const Device* device);
 
 bool RequiresRawTypeCasting(at::ScalarType scalar_type, const Device* device);
-
-c10::ScalarType GetShapeDimensionType(const Device* device);
 
 template<typename... TupleType>
 std::vector<std::vector<int64_t>> CreateComputationShapeFromMetaTensors(const std::tuple<TupleType...>& tensors) {

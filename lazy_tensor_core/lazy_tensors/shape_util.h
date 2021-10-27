@@ -3,6 +3,7 @@
 
 #include <c10/util/Optional.h>
 
+#include "lazy_tensors/computation_client/util.h"
 #include "lazy_tensors/primitive_types.h"
 #include "lazy_tensors/shape.h"
 #include "lazy_tensors/util.h"

@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "lazy_tensor_core/csrc/device.h"
 #include "lazy_tensors/computation_client/debug_macros.h"
 #include "lazy_tensors/computation_client/ltc_logging.h"
 #include "lazy_tensors/computation_client/sys_util.h"
@@ -165,8 +166,7 @@ lazy_tensors::Shape MakeTorchTensorLayout(
 
 lazy_tensors::Shape MakeArrayShapeFromDimensions(
     c10::ArrayRef<int64_t> dimensions,
-    c10::ArrayRef<bool> dynamic_dimensions, c10::ScalarType type,
-    DeviceType device_type) {
+    c10::ArrayRef<bool> dynamic_dimensions, c10::ScalarType type) {
   auto layout_ptr = LayoutManager::Get()->GetLayout(dimensions);
   if (layout_ptr != nullptr) {
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,

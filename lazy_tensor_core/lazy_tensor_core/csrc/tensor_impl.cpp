@@ -5,7 +5,6 @@
 #include <c10/macros/Macros.h>
 
 #include "lazy_tensor_core/csrc/aten_ltc_bridge.h"
-#include "lazy_tensor_core/csrc/device.h"
 #include "lazy_tensor_core/csrc/layout_manager.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_tensors/computation_client/computation_client.h"

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "lazy_tensor_core/csrc/device.h"
 #include "lazy_tensors/shape.h"
 
 namespace torch_lazy_tensors {
@@ -17,7 +16,6 @@ lazy_tensors::Shape MakeTorchTensorLayout(
 // size as dimensions.
 lazy_tensors::Shape MakeArrayShapeFromDimensions(
     c10::ArrayRef<int64_t> dimensions,
-    c10::ArrayRef<bool> dynamic_dimensions,  c10::ScalarType type,
-    DeviceType device_type);
+    c10::ArrayRef<bool> dynamic_dimensions,  c10::ScalarType type);
 
 }  // namespace torch_lazy_tensors

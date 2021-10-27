@@ -59,7 +59,6 @@
 #include "lazy_tensor_core/csrc/ops/logsumexp.h"
 #include "lazy_tensor_core/csrc/ops/masked_fill.h"
 #include "lazy_tensor_core/csrc/ops/masked_scatter.h"
-#include "lazy_tensor_core/csrc/ops/masked_select.h"
 #include "lazy_tensor_core/csrc/ops/max_in_dim.h"
 #include "lazy_tensor_core/csrc/ops/max_pool_nd.h"
 #include "lazy_tensor_core/csrc/ops/max_pool_nd_backward.h"
@@ -73,7 +72,6 @@
 #include "lazy_tensor_core/csrc/ops/nll_loss2d.h"
 #include "lazy_tensor_core/csrc/ops/nll_loss2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/nms.h"
-#include "lazy_tensor_core/csrc/ops/nonzero.h"
 #include "lazy_tensor_core/csrc/ops/normal.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
@@ -920,7 +918,7 @@ LazyTensor full(c10::ArrayRef<int64_t> size,
                 at::ScalarType scalar_type) {
   CheckShapeDimensions(size);
   lazy_tensors::Shape shape = MakeArrayShapeFromDimensions(
-      size, /*dynamic_dimensions=*/{}, scalar_type, device.hw_type);
+      size, /*dynamic_dimensions=*/{}, scalar_type);
   return LazyTensor::Create(
       LazyGraphExecutor::Get()->GetIrValueForScalar(fill_value, shape, device),
       device, scalar_type);
@@ -1232,12 +1230,6 @@ void masked_scatter_(LazyTensor& input, const LazyTensor& mask,
       source.GetIrValue()));
 }
 
-LazyTensor masked_select(const LazyTensor& input, const LazyTensor& mask) {
-  NodePtr node = torch::lazy::MakeNode<ir::ops::MaskedSelect>(
-      input.GetIrValue(), mask.GetIrValue());
-  return input.CreateFrom(torch::lazy::Value(node, 0));
-}
-
 LazyTensor max(const LazyTensor& input, const LazyTensor& other,
                c10::optional<at::ScalarType> logical_element_type) {
   return input.CreateFrom(ir::ops::Max(input.GetIrValue(), other.GetIrValue()),
@@ -1547,11 +1539,6 @@ std::pair<LazyTensor, LazyTensor> nms(const LazyTensor& boxes,
                          at::ScalarType::Int),
       LazyTensor::Create(torch::lazy::Value(node, 1), boxes.GetDevice(),
                          at::ScalarType::Int));
-}
-
-LazyTensor nonzero(const LazyTensor& input) {
-  NodePtr node = torch::lazy::MakeNode<ir::ops::NonZero>(input.GetIrValue());
-  return input.CreateFrom(torch::lazy::Value(node, 0), at::ScalarType::Long);
 }
 
 LazyTensor normal(double mean, const LazyTensor& std) {

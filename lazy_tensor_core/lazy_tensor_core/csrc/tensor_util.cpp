@@ -10,6 +10,7 @@
 
 #include <c10/util/Half.h>
 #include <c10/util/BFloat16.h>
+#include "lazy_tensor_core/csrc/device.h"
 #include "lazy_tensor_core/csrc/helpers.h"
 #include "lazy_tensor_core/csrc/layout_manager.h"
 #include "lazy_tensor_core/csrc/ts_backend/ts_computation_client.h"
@@ -423,7 +424,7 @@ void TensorToBufferSType(const at::Tensor& tensor,
       TensorToBuffer<SType, int8_t>(tensor, dest_shape, dest_buffer,
                                                 dest_buffer_size, device);
       break;
-    case c10::ScalarType::Short: 
+    case c10::ScalarType::Short:
       TensorToBuffer<SType, int16_t>(
           tensor, dest_shape, dest_buffer, dest_buffer_size, device);
       break;
@@ -682,7 +683,7 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
 lazy_tensors::ComputationClient::DataPtr TensorToDataHandle(
     const at::Tensor& tensor, const Device& device) {
   return TensorToDataHandle(
-      tensor, CreateComputationShapeFromTensor(tensor, &device), device);
+      tensor, CreateComputationShapeFromTensor(tensor), device);
 }
 
 std::vector<lazy_tensors::ComputationClient::DataPtr> CreateTensorsData(
@@ -692,9 +693,7 @@ std::vector<lazy_tensors::ComputationClient::DataPtr> CreateTensorsData(
   std::vector<lazy_tensors::ComputationClient::DataPtr> result;
   result.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    Device device(devices[i]);
-    lazy_tensors::Shape shape =
-        CreateComputationShapeFromTensor(tensors[i], &device);
+    lazy_tensors::Shape shape = CreateComputationShapeFromTensor(tensors[i]);
     result.push_back(
         MakeComputationDataFromTensor(tensors[i], shape, devices[i]));
   }
@@ -778,8 +777,7 @@ std::vector<lazy_tensors::Shape> GetComponentShapes(
   return component_shapes;
 }
 
-lazy_tensors::Shape MakeShapeWithDeviceLayout(const lazy_tensors::Shape& shape,
-                                              DeviceType device_type) {
+lazy_tensors::Shape MakeShapeWithDeviceLayout(const lazy_tensors::Shape& shape) {
   lazy_tensors::Shape device_shape(shape);
   lazy_tensors::ShapeUtil::ForEachMutableSubshape(
       &device_shape,
@@ -787,19 +785,16 @@ lazy_tensors::Shape MakeShapeWithDeviceLayout(const lazy_tensors::Shape& shape,
         if (subshape->IsArray()) {
           *subshape = MakeArrayShapeFromDimensions(
               subshape->dimensions(), subshape->dynamic_dimensions(),
-              subshape->at_element_type(), device_type);
+              subshape->at_element_type());
         }
       });
   return device_shape;
 }
 
-lazy_tensors::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
-                                                     const Device* device) {
-  Device ltc_device = GetDeviceOrCurrent(device);
+lazy_tensors::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor) {
   return MakeArrayShapeFromDimensions(Helpers::I64List(tensor.sizes()),
                                       /*dynamic_dimensions=*/{},
-                                      tensor.type().scalarType(),
-                                      ltc_device.hw_type);
+                                      tensor.type().scalarType());
 }
 
 at::ScalarType TensorTypeFromLtcType(lazy_tensors::PrimitiveType ltc_type) {
@@ -884,9 +879,7 @@ lazy_tensors::PrimitiveType GetDevicePrimitiveType(
       if (DowncastBF16() || DowncastF16()) {
         return lazy_tensors::PrimitiveType::F32;
       }
-      return ltc_device.hw_type != DeviceType::TPU
-                 ? lazy_tensors::PrimitiveType::F64
-                 : lazy_tensors::PrimitiveType::F32;
+      return lazy_tensors::PrimitiveType::F64;
     case lazy_tensors::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return lazy_tensors::PrimitiveType::F16;
@@ -894,13 +887,9 @@ lazy_tensors::PrimitiveType GetDevicePrimitiveType(
       return UseBF16() || DowncastBF16() ? lazy_tensors::PrimitiveType::BF16
                                          : lazy_tensors::PrimitiveType::F32;
     case lazy_tensors::PrimitiveType::U16:
-      return ltc_device.hw_type != DeviceType::TPU
-                 ? lazy_tensors::PrimitiveType::U16
-                 : lazy_tensors::PrimitiveType::U32;
+      return lazy_tensors::PrimitiveType::U16;
     case lazy_tensors::PrimitiveType::S16:
-      return ltc_device.hw_type != DeviceType::TPU
-                 ? lazy_tensors::PrimitiveType::S16
-                 : lazy_tensors::PrimitiveType::S32;
+      return lazy_tensors::PrimitiveType::S16;
     case lazy_tensors::PrimitiveType::S64:
       return Use32BitLong() ? lazy_tensors::PrimitiveType::S32
                             : lazy_tensors::PrimitiveType::S64;
@@ -908,9 +897,7 @@ lazy_tensors::PrimitiveType GetDevicePrimitiveType(
       return Use32BitLong() ? lazy_tensors::PrimitiveType::U32
                             : lazy_tensors::PrimitiveType::U64;
     case lazy_tensors::PrimitiveType::C128:
-      return ltc_device.hw_type != DeviceType::TPU
-                 ? lazy_tensors::PrimitiveType::C128
-                 : lazy_tensors::PrimitiveType::C64;
+      return lazy_tensors::PrimitiveType::C128;
     default:
       return type;
   }
@@ -958,12 +945,6 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type, const Device* device) {
     default:
       return false;
   }
-}
-
-c10::ScalarType GetShapeDimensionType(const Device* device) {
-  Device ltc_device = GetDeviceOrCurrent(device);
-  return ltc_device.hw_type == DeviceType::CPU ? c10::ScalarType::Long
-                                               : c10::ScalarType::Int;
 }
 
 bool IsSpecialScalar(const at::Scalar& value) {

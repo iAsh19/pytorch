@@ -685,7 +685,7 @@ LazyGraphExecutor::FetchTensorData(std::vector<LazyTensor>* tensors,
     if (handle == nullptr && config.force_ltc_data) {
       const Device& tensor_device = tensor.GetDevice();
       lazy_tensors::Shape shape =
-          MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.hw_type);
+          MakeShapeWithDeviceLayout(tensor.shape());
       handle = lazy_tensors::ComputationClient::Get()->CreateDataPlaceholder(
           tensor_device.ToString(), std::move(shape));
       tensor.SetDataHandle(handle, config.sync_ltc_data);
@@ -785,7 +785,7 @@ LazyGraphExecutor::CompilationResult LazyGraphExecutor::Compile(
   lazy_tensors::ProgramShape program_shape =
       ConsumeValue(computation->GetProgramShape());
   lazy_tensors::Shape shape =
-      MakeShapeWithDeviceLayout(program_shape.result(), coll.device.hw_type);
+      MakeShapeWithDeviceLayout(program_shape.result());
 
   std::vector<lazy_tensors::ComputationClient::CompileInstance> instances;
   instances.push_back(

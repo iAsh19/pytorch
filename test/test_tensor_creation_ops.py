@@ -1626,6 +1626,7 @@ class TestTensorCreation(TestCase):
         self.assertEqual(c1, expected)
         self.assertEqual(c2, expected)
 
+    @skipMeta
     def test_linlogspace_mem_overlap(self, device):
         x = torch.rand(1, device=device).expand(10)
         with self.assertRaisesRegex(RuntimeError, 'unsupported operation'):
@@ -3170,6 +3171,58 @@ class TestTensorCreation(TestCase):
             self.assertEqual(len(w), 0)
 
 
+class TestTensorCreationMeta(TestCase):
+    def _assert_meta_tensor_equal(self, actual, expected):
+        self.assertEqual(actual.device, torch.device('meta'))
+        self.assertEqual(actual.size(), expected.size())
+        self.assertEqual(actual.stride(), expected.stride())
+        self.assertEqual(actual.dtype, expected.dtype)
+
+    def test_range(self, device):
+        e1 = torch.range(2, 5)
+        r1 = torch.range(2, 5, device=device)
+
+        self._assert_meta_tensor_equal(r1, e1)
+
+        e2 = torch.range(3, 6, dtype=torch.float32)
+        r2 = torch.range(3, 6, dtype=torch.float32, device=device)
+
+        self._assert_meta_tensor_equal(r2, e2)
+
+    def test_arange(self, device):
+        e1 = torch.arange(10)
+        r1 = torch.arange(10, device=device)
+
+        self._assert_meta_tensor_equal(r1, e1)
+
+        e2 = torch.arange(20, dtype=torch.float32)
+        r2 = torch.arange(20, dtype=torch.float32, device=device)
+
+        self._assert_meta_tensor_equal(r2, e2)
+
+    def test_linspace(self, device):
+        e1 = torch.linspace(2, 8, 2)
+        r1 = torch.linspace(2, 8, 2, device=device)
+
+        self._assert_meta_tensor_equal(r1, e1)
+
+        e2 = torch.linspace(3, 6, 1, dtype=torch.float32)
+        r2 = torch.linspace(3, 6, 1, dtype=torch.float32, device=device)
+
+        self._assert_meta_tensor_equal(r2, e2)
+
+    def test_logspace(self, device):
+        e1 = torch.logspace(2, 8, 2)
+        r1 = torch.logspace(2, 8, 2, device=device)
+
+        self._assert_meta_tensor_equal(r1, e1)
+
+        e2 = torch.logspace(3, 6, 1, dtype=torch.float32)
+        r2 = torch.logspace(3, 6, 1, dtype=torch.float32, device=device)
+
+        self._assert_meta_tensor_equal(r2, e2)
+
+
 # Class for testing random tensor creation ops, like torch.randint
 class TestRandomTensorCreation(TestCase):
     exact_dtype = True
@@ -4022,6 +4075,7 @@ class TestAsArray(TestCase):
         check(requires_grad=False, copy=True)
 
 instantiate_device_type_tests(TestTensorCreation, globals())
+instantiate_device_type_tests(TestTensorCreationMeta, globals(), only_for="meta")
 instantiate_device_type_tests(TestRandomTensorCreation, globals())
 instantiate_device_type_tests(TestLikeTensorCreation, globals())
 instantiate_device_type_tests(TestBufferProtocol, globals(), only_for="cpu")

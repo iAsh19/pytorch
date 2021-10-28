@@ -752,14 +752,15 @@ static inline void diff_check_compatible_shape(const Tensor& self, const c10::op
 static inline void diff_check(const Tensor& self, int64_t n, int64_t dim, const c10::optional<Tensor>&prepend, const c10::optional<Tensor>& append) {
   // Helper for diff that checks whether its parameters are valid
   TORCH_CHECK(
-      n == 1,
-      "diff only supports n = 1 currently. Please file an issue at"
-      " https://github.com/pytorch/pytorch/issues/new?assignees=&labels=&template=feature-request.md"
-      " if your use case requires supporting higher-order differences");
-
-  TORCH_CHECK(
-      self.dim() >= 1,
+      self.dim()>= 1,
       "diff expects input to be at least one-dimensional");
+
+  auto prepend_size = (prepend.has_value()) ? prepend.value().size(dim) : 0;
+  auto append_size = (append.has_value()) ? append.value().size(dim) : 0;
+  auto size_along_dim = self.size(dim) + prepend_size + append_size;
+  TORCH_CHECK(
+       n >= 1 && n < size_along_dim,
+       "diff expects n to be at least 1 and < size along dim after prepend and append=", size_along_dim, " but got ", n);
 
   diff_check_compatible_shape(self, prepend, dim);
   diff_check_compatible_shape(self, append, dim);
@@ -767,10 +768,20 @@ static inline void diff_check(const Tensor& self, int64_t n, int64_t dim, const 
 
 static inline Tensor diff_helper(const Tensor& self, int64_t n, int64_t dim) {
   auto out_len = self.size(dim) - 1;
-  if (self.dtype() == at::kBool) {
-    return at::logical_xor(at::narrow(self, dim, 1, out_len), at::narrow(self, dim, 0, out_len));
+  auto result = self;
+  bool is_kBool = self.dtype() == at::kBool;
+
+  for (const auto i : c10::irange(n)) {
+    (void)i; //Suppress unused variable warning
+    if (is_kBool){
+      result = at::logical_xor(at::narrow(result, dim, 1, out_len), at::narrow(result, dim, 0, out_len));
+    } else{
+      result = at::narrow(result, dim, 1, out_len) - at::narrow(result, dim, 0, out_len);
+    }
+    out_len -= 1;
   }
-  return at::narrow(self, dim, 1, out_len) - at::narrow(self, dim, 0, out_len);
+
+  return result;
 }
 
 Tensor diff(const Tensor& self, int64_t n, int64_t dim, const c10::optional<Tensor>& prepend, const c10::optional<Tensor>& append) {
@@ -784,11 +795,21 @@ Tensor diff(const Tensor& self, int64_t n, int64_t dim, const c10::optional<Tens
 }
 
 static inline Tensor& diff_out_helper(const Tensor& self, int64_t n, int64_t dim, Tensor& result) {
-  auto out_len = self.size(dim) - 1;
-  if (self.dtype() == at::kBool) {
-    return at::logical_xor_out(result, at::narrow(self, dim, 1, out_len), at::narrow(self, dim, 0, out_len));
+  auto out_len = self.size(dim) - n;
+  auto prev_result = self;
+
+  if (n > 1){
+    prev_result = diff_helper(self, n-1, dim);
   }
-  return at::sub_out(result, at::narrow(self, dim, 1, out_len), at::narrow(self, dim, 0, out_len));
+
+  if (self.dtype() == at::kBool) {
+    at::logical_xor_out(result, at::narrow(prev_result, dim, 1, out_len), at::narrow(prev_result, dim, 0, out_len));
+
+  } else{
+    at::sub_out(result, at::narrow(prev_result, dim, 1, out_len), at::narrow(prev_result, dim, 0, out_len));
+  }
+
+  return result;
 }
 
 Tensor& diff_out(const Tensor& self, int64_t n, int64_t dim, const c10::optional<Tensor>& prepend, const c10::optional<Tensor>& append, Tensor& result) {

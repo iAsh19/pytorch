@@ -189,7 +189,6 @@ DEFINE_DISPATCH(softplus_backward_stub);
 DEFINE_DISPATCH(log_sigmoid_cpu_stub);
 DEFINE_DISPATCH(log_sigmoid_backward_stub);
 DEFINE_DISPATCH(threshold_stub);
-DEFINE_DISPATCH(hardtanh_backward_stub);
 DEFINE_DISPATCH(hardsigmoid_stub);
 DEFINE_DISPATCH(hardsigmoid_backward_stub);
 DEFINE_DISPATCH(hardswish_stub);
@@ -372,19 +371,6 @@ Tensor& hardtanh_(Tensor& self, const Scalar& min, const Scalar& max) {
   return at::clamp_(self, min, max);
 }
 
-Tensor& hardtanh_backward_out(const Tensor& grad_output, const Tensor& self, const Scalar& min, const Scalar& max, Tensor& grad_input) {
-  auto iter = TensorIterator::borrowing_binary_op(grad_input, grad_output, self);
-  hardtanh_backward_stub(iter.device_type(), iter, min, max);
-  return grad_input;
-}
-
-Tensor hardtanh_backward(const Tensor& grad_output, const Tensor& self, const Scalar& min, const Scalar& max) {
-  Tensor result;
-  auto iter = TensorIterator::borrowing_binary_op(result, grad_output, self);
-  hardtanh_backward_stub(iter.device_type(), iter, min, max);
-  return iter.output();
-}
-
 Tensor hardswish(const Tensor& self) {
   #if defined(C10_MOBILE) && defined(USE_XNNPACK)
   if (xnnpack::use_hardswish(self)) {
@@ -435,7 +421,7 @@ Tensor selu(const Tensor & self) {
 }
 
 Tensor relu6(const Tensor & self) {
-  return at::hardtanh(self, /*min_val=*/0, /*max_val=*/6);
+  return at::clamp(self, /*min_val=*/0, /*max_val=*/6);
 }
 
 Tensor & selu_(Tensor & self) {
@@ -443,7 +429,7 @@ Tensor & selu_(Tensor & self) {
 }
 
 Tensor & relu6_(Tensor & self) {
-  return at::hardtanh_(self, /*min_val=*/0, /*max_val=*/6);
+  return at::clamp_(self, /*min_val=*/0, /*max_val=*/6);
 }
 
 Tensor celu(const Tensor & self, const Scalar& alpha) {

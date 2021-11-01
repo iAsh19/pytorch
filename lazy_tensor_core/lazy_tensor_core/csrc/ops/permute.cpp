@@ -31,7 +31,7 @@ lazy_tensors::Shape Permute::MakePermuteShape(
     c10::ArrayRef<int64_t> permutation) {
   return lazy_tensors::ShapeUtil::MakeShape(
       source_shape.at_element_type(),
-      Helpers::Permute(permutation, source_shape.dimensions()));
+      lazy_tensors::Permute(permutation, source_shape.dimensions()));
 }
 
 }  // namespace ops
